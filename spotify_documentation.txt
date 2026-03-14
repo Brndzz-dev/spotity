@@ -1,0 +1,271 @@
+Seven Music - Documentação Completa (FiveM)
+==========================================
+
+Visão geral
+-----------
+O Seven Music é um sistema de música estilo Spotify para servidores FiveM (GTA RP), com:
+- Interface NUI moderna (tema escuro)
+- Busca real de músicas pelo Spotify Web API
+- Reprodução com áudio 3D (xsound)
+- Integração automática com veículos
+- Caixa de som portátil fora de veículos
+- Histórico de músicas e músicas curtidas
+- Suporte multiplayer sincronizado
+- Comando /som para abrir UI e ajustar volume
+
+
+1) Requisitos
+-------------
+Você precisa instalar:
+1. FiveM server atualizado (artifact recente)
+2. Dependência xsound instalada no servidor
+3. Dependência oxmysql instalada no servidor
+4. Banco de dados MySQL/MariaDB configurado
+5. Credenciais da Spotify Web API
+6. Um serviço resolver de áudio (ex.: backend com yt-dlp), pois Spotify não fornece stream direto para terceiros
+
+Importante:
+- A API do Spotify é usada para busca e metadados.
+- Para tocar áudio no jogo, o script chama um endpoint resolver (configurável) que retorna stream_url.
+
+
+2) Estrutura do recurso
+-----------------------
+Coloque a pasta do recurso assim:
+resources/[local]/seven_music/
+
+Arquivos principais:
+- fxmanifest.lua
+- config.lua
+- client.lua
+- server.lua
+- html/index.html
+- html/style.css
+- html/script.js
+
+
+3) Instalação no servidor
+-------------------------
+Passo a passo:
+1. Copie a pasta seven_music para resources/[local]/
+2. Garanta que xsound e oxmysql estejam iniciando antes do seven_music
+3. No server.cfg, adicione:
+
+ensure oxmysql
+ensure xsound
+ensure seven_music
+
+4. Configure conexão MySQL normalmente (oxmysql)
+5. Configure as chaves Spotify via convar (recomendado):
+
+setr seven_music_spotify_client_id "SEU_CLIENT_ID"
+setr seven_music_spotify_client_secret "SEU_CLIENT_SECRET"
+
+6. Configure endpoint do resolver de áudio:
+
+setr seven_music_resolver_endpoint "http://SEU_BACKEND:PORTA/sevenmusic/resolve"
+
+7. Reinicie o servidor ou execute:
+
+refresh
+ensure seven_music
+
+
+4) Como criar as chaves da Spotify API
+--------------------------------------
+1. Acesse: https://developer.spotify.com/dashboard
+2. Crie um App novo
+3. Copie Client ID e Client Secret
+4. Coloque no server.cfg usando setr
+
+Observação:
+- Não coloque segredo diretamente no client/NUI.
+- O script já usa busca no server para proteger as credenciais.
+
+
+5) Resolver de áudio (obrigatório)
+----------------------------------
+Como Spotify não entrega stream direto para esse caso de uso, é preciso um resolver.
+O Seven Music envia ao resolver:
+- track_id
+- title
+- artist
+- external_url
+
+E espera resposta JSON:
+{
+  "stream_url": "https://..."
+}
+
+Recomendação de produção:
+- Faça um microserviço em Node/Python
+- Implemente cache de resultados
+- Valide origem e limite de requisições
+- Trate erros e fallback
+
+Se o resolver falhar, o jogador recebe notificação de erro e o servidor não quebra.
+
+
+6) Comandos disponíveis
+-----------------------
+Comando principal:
+- /som
+  Abre/fecha interface Seven Music.
+
+Volume pelo mesmo comando:
+- /som 1
+- /som 25
+- /som 50
+- /som 100
+
+Faixa válida:
+- Mínimo: 1
+- Máximo: 100
+
+Admin (ACE):
+- /som stopall  -> para todas as músicas ativas
+- /som global   -> reservado para expansão de modo global
+
+
+7) Permissões ACE
+-----------------
+No config.lua existe:
+Config.AdminAce = 'sevenmusic.admin'
+
+No server.cfg, exemplo de permissão:
+
+add_ace group.admin sevenmusic.admin allow
+add_principal identifier.license:SEU_LICENSE group.admin
+
+Resultado:
+- Jogadores comuns: /som e volume
+- Admin com ACE: comandos administrativos
+
+
+8) Funcionamento do sistema no veículo
+--------------------------------------
+Fluxo:
+1. Jogador toca música fora do carro -> origem inicial pode ser speaker
+2. Ao entrar no veículo, o client detecta e move a origem para o veículo
+3. Som passa a seguir o carro automaticamente
+4. Jogadores próximos continuam ouvindo normalmente (áudio 3D)
+5. Se sair do veículo, o som permanece no veículo até nova movimentação de origem
+
+Esse comportamento replica sistemas avançados de RP com continuidade de fonte sonora.
+
+
+9) Funcionamento da caixa de som portátil
+-----------------------------------------
+Quando a música é tocada fora do veículo:
+1. O script cria objeto da caixa (Config.SpeakerModel)
+2. A caixa é anexada na mão do ped
+3. A posição de áudio 3D acompanha o objeto
+4. Ao parar música, a caixa é removida automaticamente
+
+Opcional:
+- Você pode expandir para “soltar caixa no chão”, usando Config.EnableSpeakerDrop + lógica adicional.
+
+
+10) Histórico e músicas curtidas
+--------------------------------
+Persistência:
+- MySQL (preferencial e já implementado)
+- localStorage NUI (fallback visual/local)
+
+Banco:
+- seven_music_history
+- seven_music_likes
+
+O sistema salva:
+- id da música
+- nome da música
+- artista
+- capa
+- duração
+- stream_url
+- data/hora
+
+Cada jogador é identificado por license principal.
+
+
+11) Configuração geral (config.lua)
+-----------------------------------
+Principais opções:
+- Config.Debug
+- Config.DefaultVolume
+- Config.MaxDistance
+- Config.SpeakerModel
+- Config.AdminAce
+- Config.SpotifyMarket
+- Config.SearchLimit
+- Config.AudioResolverEndpoint
+- Config.AttachUpdateMs
+
+Dica:
+- Para servidores grandes, ajuste MaxDistance com equilíbrio entre imersão e performance.
+
+
+12) Interface NUI (Spotify-like)
+--------------------------------
+A interface possui:
+- Home: Liked Songs + Recently Played
+- Search: busca em tempo real
+- Library: biblioteca do jogador
+
+Cada resultado mostra:
+- Capa
+- Título
+- Artista
+- Duração
+
+Visual:
+- Tema escuro
+- Layout moderno
+- Animações suaves
+
+
+13) Estabilidade e tratamento de erros
+--------------------------------------
+Boas práticas já aplicadas:
+- Validação de payload recebido da API
+- Validação de retorno JSON no resolver
+- Mensagens amigáveis ao usuário
+- Falhas de busca/reprodução não derrubam recurso
+- Remoção de áudio ao desconectar jogador
+
+Recomendações extras de produção:
+- Adicionar rate limit por jogador na busca
+- Adicionar auditoria/log administrativo
+- Adicionar retry com backoff para APIs
+
+
+14) Como customizar rapidamente
+-------------------------------
+- Trocar tema/cores: html/style.css
+- Alterar layout e componentes: html/index.html
+- Ajustar comportamento da UI: html/script.js
+- Regras de gameplay/áudio: client.lua e server.lua
+- Defaults gerais: config.lua
+
+
+15) Checklist final de deploy
+-----------------------------
+[ ] oxmysql funcionando
+[ ] xsound funcionando
+[ ] seven_music em ensure
+[ ] Credenciais Spotify configuradas
+[ ] Resolver endpoint online
+[ ] ACE admin configurada
+[ ] Banco com permissões corretas
+[ ] Teste em jogo: /som, busca, play, volume, veículo, speaker
+
+
+Suporte
+-------
+Caso queira evolução para nível “servidor grande”, próximas melhorias recomendadas:
+- Playlist por jogador
+- Fila de reprodução (queue)
+- Sistema de DJ compartilhado
+- Modo global por área/zona
+- Caching distribuído do resolver
+- Controle anti-abuso por cooldown e ACL avançada

@@ -1,0 +1,61 @@
+<!--
+    Seven Music - NUI HTML
+    Spotify-inspired layout. Edit structure/sections/components here.
+-->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seven Music</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app" class="hidden">
+    <aside class="sidebar">
+      <div class="logo">🎵 Seven Music</div>
+      <nav>
+        <button class="nav-btn active" data-view="home">Home</button>
+        <button class="nav-btn" data-view="search">Search</button>
+        <button class="nav-btn" data-view="library">Library</button>
+      </nav>
+      <div class="profile">Player</div>
+    </aside>
+
+    <main class="content">
+      <header class="toolbar">
+        <input id="searchInput" type="text" placeholder="Buscar músicas, artistas..." />
+        <button id="closeBtn" class="close-btn">Fechar</button>
+      </header>
+
+      <section id="home" class="view active">
+        <h2>Liked Songs</h2>
+        <div id="likedSongs" class="song-list"></div>
+        <h2>Recently Played</h2>
+        <div id="recentSongs" class="song-list"></div>
+      </section>
+
+      <section id="search" class="view">
+        <h2>Resultados da Busca</h2>
+        <div id="searchResults" class="song-list"></div>
+      </section>
+
+      <section id="library" class="view">
+        <h2>Sua Biblioteca</h2>
+        <div id="librarySongs" class="song-list"></div>
+      </section>
+    </main>
+
+    <footer class="player-bar">
+      <div id="nowPlaying">Nenhuma música tocando.</div>
+      <div class="controls">
+        <button id="stopBtn">Parar</button>
+        <button id="refreshBtn">Atualizar Biblioteca</button>
+      </div>
+      <div id="toast" class="toast"></div>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
